@@ -121,6 +121,7 @@ export class Game {
     this.dir = 1;
     this.eBullets = [];
     this.bullets = [];
+    this.powerUps = [];
   }
 
   start() {
