@@ -377,6 +377,29 @@ export class Game {
     ctx.fillText(String(this.score).padStart(5, "0"), GAME_W - 6, 14);
     ctx.textAlign = "left";
 
+    // barra de tiempo del power-up
+    if (this.doubleShot > 0) {
+      const bw = 70;
+      const bx = GAME_W / 2 - bw / 2;
+      const by = 6;
+      drawPowerUp(ctx, bx - 14, by - 1, Math.floor(this.t * 8) % 2 === 0);
+      ctx.fillStyle = PALETTE.powerBase;
+      ctx.fillRect(bx, by, bw, 6);
+      ctx.fillStyle = PALETTE.powerGlow;
+      ctx.fillRect(bx, by, Math.round((bw * this.doubleShot) / POWER_DURATION), 6);
+      ctx.fillStyle = PALETTE.powerNeon;
+      ctx.fillRect(bx, by, Math.round((bw * this.doubleShot) / POWER_DURATION), 2);
+      ctx.strokeStyle = PALETTE.powerNeon;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 5);
+      ctx.fillStyle = PALETTE.powerWhite;
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.textAlign = "center";
+      ctx.fillText("DOBLE", GAME_W / 2, by + 18);
+      ctx.textAlign = "left";
+    }
+
+
     if (this.state === "start") {
       overlay(ctx);
       ctx.fillStyle = PALETTE.enemy;
