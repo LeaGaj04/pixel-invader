@@ -185,15 +185,51 @@ export class Game {
 
     this.cooldown -= dt;
     if (this.invuln > 0) this.invuln -= dt;
+    if (this.doubleShot > 0) this.doubleShot = Math.max(0, this.doubleShot - dt);
     if (this.keys["Space"] && this.cooldown <= 0) {
-      this.cooldown = 0.32;
-      this.bullets.push({ x: this.px + P_W / 2, y: GAME_H - 22, vy: -230 });
+      if (this.doubleShot > 0) {
+        this.cooldown = 0.26;
+        this.bullets.push({ x: this.px + 3, y: GAME_H - 22, vy: -270 });
+        this.bullets.push({ x: this.px + P_W - 3, y: GAME_H - 22, vy: -270 });
+      } else {
+        this.cooldown = 0.32;
+        this.bullets.push({ x: this.px + P_W / 2, y: GAME_H - 22, vy: -230 });
+      }
     }
 
     for (const b of this.bullets) b.y += b.vy * dt;
     this.bullets = this.bullets.filter((b) => b.y > -10);
     for (const b of this.eBullets) b.y += b.vy * dt;
     this.eBullets = this.eBullets.filter((b) => b.y < GAME_H + 10);
+
+    // power-ups caen y son recogidos
+    const pTop = GAME_H - 24;
+    for (const p of this.powerUps) p.y += p.vy * dt;
+    this.powerUps = this.powerUps.filter((p) => {
+      if (p.y > GAME_H + 10) return false;
+      const hit =
+        p.y + PU_H >= pTop &&
+        p.y <= pTop + P_H &&
+        p.x + PU_W >= this.px &&
+        p.x <= this.px + P_W;
+      if (hit) {
+        this.doubleShot = POWER_DURATION;
+        for (let i = 0; i < 14; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = 20 + Math.random() * 50;
+          this.particles.push({
+            x: p.x + PU_W / 2,
+            y: p.y + PU_H / 2,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
+            life: 0.25 + Math.random() * 0.35,
+            color: Math.random() < 0.5 ? PALETTE.powerNeon : PALETTE.powerWhite,
+          });
+        }
+        return false;
+      }
+      return true;
+    });
 
     // formation movement
     const alive = this.enemies.filter((e) => e.alive);
