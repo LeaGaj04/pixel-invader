@@ -472,3 +472,20 @@ function drawLifeIcon(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.fillRect(x + 1, y + 2, 6, 2);
   ctx.fillRect(x, y + 4, 8, 2);
 }
+
+function drawPowerUp(ctx: CanvasRenderingContext2D, x: number, y: number, pulse: boolean) {
+  // base oscura con borde neón celeste y detalles blancos
+  ctx.fillStyle = PALETTE.powerBase;
+  ctx.fillRect(x + 1, y + 1, PU_W - 2, PU_H - 2);
+  ctx.fillStyle = pulse ? PALETTE.powerNeon : PALETTE.powerGlow;
+  ctx.fillRect(x + 2, y, PU_W - 4, 1);
+  ctx.fillRect(x + 2, y + PU_H - 1, PU_W - 4, 1);
+  ctx.fillRect(x, y + 2, 1, PU_H - 4);
+  ctx.fillRect(x + PU_W - 1, y + 2, 1, PU_H - 4);
+  ctx.fillStyle = PALETTE.powerNeon;
+  ctx.fillRect(x + 3, y + 3, 1, 4);
+  ctx.fillRect(x + 6, y + 3, 1, 4);
+  ctx.fillStyle = PALETTE.powerWhite;
+  ctx.fillRect(x + 3, y + 3, 1, 1);
+  ctx.fillRect(x + 6, y + 3, 1, 1);
+}
