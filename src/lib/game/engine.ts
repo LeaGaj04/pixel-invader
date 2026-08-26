@@ -82,6 +82,8 @@ export class Game {
   private eBullets: Bullet[] = [];
   private enemies: Enemy[] = [];
   private particles: Particle[] = [];
+  private powerUps: PowerUp[] = [];
+  doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
   private cooldown = 0;
   private invuln = 0;
