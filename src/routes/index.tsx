@@ -1,24 +1,44 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ArcadeGame } from "@/components/ArcadeGame";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Pixel Invaders — Juego arcade retro 8-bit" },
+      {
+        name: "description",
+        content:
+          "Juega Pixel Invaders: un shooter espacial arcade 8-bit en canvas. Mueve tu nave, dispara láseres y destruye la formación alienígena.",
+      },
+      { property: "og:title", content: "Pixel Invaders — Juego arcade retro 8-bit" },
+      {
+        property: "og:description",
+        content:
+          "Shooter espacial pixel art con naves, láseres y explosiones. Flechas para moverte, espacio para disparar.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#05050f] px-4 py-10">
+      <h1
+        className="text-center text-xl text-[#a45cff] sm:text-2xl"
+        style={{ fontFamily: '"Press Start 2P", monospace' }}
+      >
+        PIXEL INVADERS
+      </h1>
+      <ArcadeGame />
+      <p
+        className="text-center text-[10px] leading-relaxed text-[#8891b5]"
+        style={{ fontFamily: '"Press Start 2P", monospace' }}
+      >
+        ← → MOVER · ESPACIO DISPARAR
+      </p>
+    </main>
   );
 }
