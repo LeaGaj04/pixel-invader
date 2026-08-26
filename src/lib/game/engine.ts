@@ -16,7 +16,13 @@ export const PALETTE = {
   score: "#39ff88",
   fire1: "#ff8a1f",
   fire2: "#ff2d2d",
+  powerBase: "#0b1b2e",
+  powerNeon: "#4fd8ff",
+  powerGlow: "#0ea5e9",
+  powerWhite: "#ffffff",
 };
+
+export const POWER_DURATION = 10;
 
 type State = "start" | "playing" | "gameover";
 
