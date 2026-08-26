@@ -16,7 +16,13 @@ export const PALETTE = {
   score: "#39ff88",
   fire1: "#ff8a1f",
   fire2: "#ff2d2d",
+  powerBase: "#0b1b2e",
+  powerNeon: "#4fd8ff",
+  powerGlow: "#0ea5e9",
+  powerWhite: "#ffffff",
 };
+
+export const POWER_DURATION = 10;
 
 type State = "start" | "playing" | "gameover";
 
@@ -46,6 +52,15 @@ interface Particle {
   life: number;
   color: string;
 }
+interface PowerUp {
+  x: number;
+  y: number;
+  vy: number;
+}
+
+const PU_W = 10;
+const PU_H = 10;
+
 
 const ROWS = 3;
 const COLS = 6;
@@ -67,6 +82,8 @@ export class Game {
   private eBullets: Bullet[] = [];
   private enemies: Enemy[] = [];
   private particles: Particle[] = [];
+  private powerUps: PowerUp[] = [];
+  doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
   private cooldown = 0;
   private invuln = 0;
@@ -104,6 +121,7 @@ export class Game {
     this.dir = 1;
     this.eBullets = [];
     this.bullets = [];
+    this.powerUps = [];
   }
 
   start() {
@@ -114,6 +132,7 @@ export class Game {
     this.px = GAME_W / 2 - P_W / 2;
     this.particles = [];
     this.invuln = 0;
+    this.doubleShot = 0;
     this.spawnWave();
   }
 
@@ -166,15 +185,51 @@ export class Game {
 
     this.cooldown -= dt;
     if (this.invuln > 0) this.invuln -= dt;
+    if (this.doubleShot > 0) this.doubleShot = Math.max(0, this.doubleShot - dt);
     if (this.keys["Space"] && this.cooldown <= 0) {
-      this.cooldown = 0.32;
-      this.bullets.push({ x: this.px + P_W / 2, y: GAME_H - 22, vy: -230 });
+      if (this.doubleShot > 0) {
+        this.cooldown = 0.26;
+        this.bullets.push({ x: this.px + 3, y: GAME_H - 22, vy: -270 });
+        this.bullets.push({ x: this.px + P_W - 3, y: GAME_H - 22, vy: -270 });
+      } else {
+        this.cooldown = 0.32;
+        this.bullets.push({ x: this.px + P_W / 2, y: GAME_H - 22, vy: -230 });
+      }
     }
 
     for (const b of this.bullets) b.y += b.vy * dt;
     this.bullets = this.bullets.filter((b) => b.y > -10);
     for (const b of this.eBullets) b.y += b.vy * dt;
     this.eBullets = this.eBullets.filter((b) => b.y < GAME_H + 10);
+
+    // power-ups caen y son recogidos
+    const pTop = GAME_H - 24;
+    for (const p of this.powerUps) p.y += p.vy * dt;
+    this.powerUps = this.powerUps.filter((p) => {
+      if (p.y > GAME_H + 10) return false;
+      const hit =
+        p.y + PU_H >= pTop &&
+        p.y <= pTop + P_H &&
+        p.x + PU_W >= this.px &&
+        p.x <= this.px + P_W;
+      if (hit) {
+        this.doubleShot = POWER_DURATION;
+        for (let i = 0; i < 14; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = 20 + Math.random() * 50;
+          this.particles.push({
+            x: p.x + PU_W / 2,
+            y: p.y + PU_H / 2,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
+            life: 0.25 + Math.random() * 0.35,
+            color: Math.random() < 0.5 ? PALETTE.powerNeon : PALETTE.powerWhite,
+          });
+        }
+        return false;
+      }
+      return true;
+    });
 
     // formation movement
     const alive = this.enemies.filter((e) => e.alive);
@@ -220,6 +275,13 @@ export class Game {
           b.y = -100;
           this.score += 10 * (ROWS - e.row);
           this.explode(e.x + E_W / 2, e.y + E_H / 2);
+          if (Math.random() < 0.15) {
+            this.powerUps.push({
+              x: e.x + E_W / 2 - PU_W / 2,
+              y: e.y + E_H / 2,
+              vy: 52,
+            });
+          }
           break;
         }
       }
@@ -270,13 +332,28 @@ export class Game {
       drawAlien(ctx, Math.floor(e.x), Math.floor(e.y), Math.floor(this.t * 2) % 2 === 0);
     }
 
+    // power-ups
+    for (const p of this.powerUps) {
+      drawPowerUp(ctx, Math.floor(p.x), Math.floor(p.y), Math.floor(this.t * 8) % 2 === 0);
+    }
+
     // bullets
-    ctx.fillStyle = PALETTE.laser;
+    const twin = this.doubleShot > 0;
     for (const b of this.bullets) {
       const x = Math.floor(b.x);
       const y = Math.floor(b.y);
-      ctx.fillRect(x, y, 2, 4);
-      ctx.fillRect(x, y + 6, 2, 3);
+      if (twin) {
+        ctx.fillStyle = PALETTE.powerGlow;
+        ctx.fillRect(x - 1, y, 4, 6);
+        ctx.fillStyle = PALETTE.powerNeon;
+        ctx.fillRect(x, y, 2, 6);
+        ctx.fillStyle = PALETTE.powerWhite;
+        ctx.fillRect(x, y + 1, 2, 2);
+      } else {
+        ctx.fillStyle = PALETTE.laser;
+        ctx.fillRect(x, y, 2, 4);
+        ctx.fillRect(x, y + 6, 2, 3);
+      }
     }
     ctx.fillStyle = PALETTE.enemyShot;
     for (const b of this.eBullets) ctx.fillRect(Math.floor(b.x), Math.floor(b.y), 2, 5);
@@ -299,6 +376,29 @@ export class Game {
     ctx.textAlign = "right";
     ctx.fillText(String(this.score).padStart(5, "0"), GAME_W - 6, 14);
     ctx.textAlign = "left";
+
+    // barra de tiempo del power-up
+    if (this.doubleShot > 0) {
+      const bw = 70;
+      const bx = GAME_W / 2 - bw / 2;
+      const by = 6;
+      drawPowerUp(ctx, bx - 14, by - 1, Math.floor(this.t * 8) % 2 === 0);
+      ctx.fillStyle = PALETTE.powerBase;
+      ctx.fillRect(bx, by, bw, 6);
+      ctx.fillStyle = PALETTE.powerGlow;
+      ctx.fillRect(bx, by, Math.round((bw * this.doubleShot) / POWER_DURATION), 6);
+      ctx.fillStyle = PALETTE.powerNeon;
+      ctx.fillRect(bx, by, Math.round((bw * this.doubleShot) / POWER_DURATION), 2);
+      ctx.strokeStyle = PALETTE.powerNeon;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 5);
+      ctx.fillStyle = PALETTE.powerWhite;
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.textAlign = "center";
+      ctx.fillText("DOBLE", GAME_W / 2, by + 18);
+      ctx.textAlign = "left";
+    }
+
 
     if (this.state === "start") {
       overlay(ctx);
@@ -371,4 +471,21 @@ function drawLifeIcon(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.fillRect(x + 3, y, 2, 2);
   ctx.fillRect(x + 1, y + 2, 6, 2);
   ctx.fillRect(x, y + 4, 8, 2);
+}
+
+function drawPowerUp(ctx: CanvasRenderingContext2D, x: number, y: number, pulse: boolean) {
+  // base oscura con borde neón celeste y detalles blancos
+  ctx.fillStyle = PALETTE.powerBase;
+  ctx.fillRect(x + 1, y + 1, PU_W - 2, PU_H - 2);
+  ctx.fillStyle = pulse ? PALETTE.powerNeon : PALETTE.powerGlow;
+  ctx.fillRect(x + 2, y, PU_W - 4, 1);
+  ctx.fillRect(x + 2, y + PU_H - 1, PU_W - 4, 1);
+  ctx.fillRect(x, y + 2, 1, PU_H - 4);
+  ctx.fillRect(x + PU_W - 1, y + 2, 1, PU_H - 4);
+  ctx.fillStyle = PALETTE.powerNeon;
+  ctx.fillRect(x + 3, y + 3, 1, 4);
+  ctx.fillRect(x + 6, y + 3, 1, 4);
+  ctx.fillStyle = PALETTE.powerWhite;
+  ctx.fillRect(x + 3, y + 3, 1, 1);
+  ctx.fillRect(x + 6, y + 3, 1, 1);
 }
