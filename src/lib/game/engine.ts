@@ -275,6 +275,13 @@ export class Game {
           b.y = -100;
           this.score += 10 * (ROWS - e.row);
           this.explode(e.x + E_W / 2, e.y + E_H / 2);
+          if (Math.random() < 0.15) {
+            this.powerUps.push({
+              x: e.x + E_W / 2 - PU_W / 2,
+              y: e.y + E_H / 2,
+              vy: 52,
+            });
+          }
           break;
         }
       }
