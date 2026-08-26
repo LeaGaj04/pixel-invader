@@ -25,16 +25,19 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#05050f] px-4 py-10">
+    <main
+      className="flex h-[100dvh] w-full touch-none flex-col items-center justify-center gap-4 overflow-hidden bg-[#05050f] px-3 py-4"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       <h1
-        className="text-center text-xl text-[#a45cff] sm:text-2xl"
+        className="text-center text-sm text-[#a45cff] sm:text-2xl"
         style={{ fontFamily: '"Press Start 2P", monospace' }}
       >
         PIXEL INVADERS
       </h1>
       <ArcadeGame />
       <p
-        className="text-center text-[10px] leading-relaxed text-[#8891b5]"
+        className="hidden text-center text-[10px] leading-relaxed text-[#8891b5] sm:block"
         style={{ fontFamily: '"Press Start 2P", monospace' }}
       >
         ← → MOVER · ESPACIO DISPARAR
