@@ -332,13 +332,28 @@ export class Game {
       drawAlien(ctx, Math.floor(e.x), Math.floor(e.y), Math.floor(this.t * 2) % 2 === 0);
     }
 
+    // power-ups
+    for (const p of this.powerUps) {
+      drawPowerUp(ctx, Math.floor(p.x), Math.floor(p.y), Math.floor(this.t * 8) % 2 === 0);
+    }
+
     // bullets
-    ctx.fillStyle = PALETTE.laser;
+    const twin = this.doubleShot > 0;
     for (const b of this.bullets) {
       const x = Math.floor(b.x);
       const y = Math.floor(b.y);
-      ctx.fillRect(x, y, 2, 4);
-      ctx.fillRect(x, y + 6, 2, 3);
+      if (twin) {
+        ctx.fillStyle = PALETTE.powerGlow;
+        ctx.fillRect(x - 1, y, 4, 6);
+        ctx.fillStyle = PALETTE.powerNeon;
+        ctx.fillRect(x, y, 2, 6);
+        ctx.fillStyle = PALETTE.powerWhite;
+        ctx.fillRect(x, y + 1, 2, 2);
+      } else {
+        ctx.fillStyle = PALETTE.laser;
+        ctx.fillRect(x, y, 2, 4);
+        ctx.fillRect(x, y + 6, 2, 3);
+      }
     }
     ctx.fillStyle = PALETTE.enemyShot;
     for (const b of this.eBullets) ctx.fillRect(Math.floor(b.x), Math.floor(b.y), 2, 5);
