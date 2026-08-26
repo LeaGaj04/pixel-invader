@@ -132,6 +132,7 @@ export class Game {
     this.px = GAME_W / 2 - P_W / 2;
     this.particles = [];
     this.invuln = 0;
+    this.doubleShot = 0;
     this.spawnWave();
   }
 
