@@ -52,6 +52,15 @@ interface Particle {
   life: number;
   color: string;
 }
+interface PowerUp {
+  x: number;
+  y: number;
+  vy: number;
+}
+
+const PU_W = 10;
+const PU_H = 10;
+
 
 const ROWS = 3;
 const COLS = 6;
