@@ -20,6 +20,9 @@ export const PALETTE = {
   powerNeon: "#4fd8ff",
   powerGlow: "#0ea5e9",
   powerWhite: "#ffffff",
+  saucer: "#ffd23f",
+  saucerDark: "#b8860b",
+  saucerLight: "#fff3c4",
 };
 
 export const POWER_DURATION = 10;
@@ -57,9 +60,21 @@ interface PowerUp {
   y: number;
   vy: number;
 }
+interface Saucer {
+  x: number;
+  y: number;
+  vx: number;
+  hp: number;
+  flash: number;
+}
 
 const PU_W = 10;
 const PU_H = 10;
+const S_W = 20;
+const S_H = 8;
+const S_Y = 20;
+const SAUCER_HP = 3;
+const SAUCER_SCORE = 500;
 
 
 const ROWS = 3;
@@ -83,6 +98,8 @@ export class Game {
   private enemies: Enemy[] = [];
   private particles: Particle[] = [];
   private powerUps: PowerUp[] = [];
+  private saucer: Saucer | null = null;
+  private saucerTimer = 6 + Math.random() * 6;
   doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
   private cooldown = 0;
@@ -122,6 +139,8 @@ export class Game {
     this.eBullets = [];
     this.bullets = [];
     this.powerUps = [];
+    this.saucer = null;
+    this.saucerTimer = 6 + Math.random() * 6;
   }
 
   start() {
@@ -231,6 +250,33 @@ export class Game {
       return true;
     });
 
+    // platillo veloz: aparición ocasional y movimiento con rebote
+    if (this.saucer) {
+      const s = this.saucer;
+      s.x += s.vx * dt;
+      if (s.x < 4) {
+        s.x = 4;
+        s.vx = Math.abs(s.vx);
+      } else if (s.x > GAME_W - S_W - 4) {
+        s.x = GAME_W - S_W - 4;
+        s.vx = -Math.abs(s.vx);
+      }
+      if (s.flash > 0) s.flash -= dt;
+    } else {
+      this.saucerTimer -= dt;
+      if (this.saucerTimer <= 0) {
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        const speed = 70 + this.wave * 10 + Math.random() * 30;
+        this.saucer = {
+          x: dir === 1 ? 4 : GAME_W - S_W - 4,
+          y: S_Y,
+          vx: speed * dir,
+          hp: SAUCER_HP,
+          flash: 0,
+        };
+      }
+    }
+
     // formation movement
     const alive = this.enemies.filter((e) => e.alive);
     if (alive.length === 0) {
@@ -265,6 +311,35 @@ export class Game {
       const shooters = [...cols.values()];
       const s = shooters[Math.floor(Math.random() * shooters.length)];
       if (s) this.eBullets.push({ x: s.x + E_W / 2, y: s.y + E_H, vy: 90 + this.wave * 8 });
+    }
+
+    // laser vs platillo (vuela por encima de la formación)
+    if (this.saucer) {
+      const s = this.saucer;
+      for (const b of this.bullets) {
+        if (b.x >= s.x && b.x <= s.x + S_W && b.y >= s.y && b.y <= s.y + S_H) {
+          b.y = -100;
+          s.hp--;
+          s.flash = 0.15;
+          if (s.hp <= 0) {
+            this.score += SAUCER_SCORE;
+            this.explode(s.x + S_W / 2, s.y + S_H / 2, 34);
+            if (Math.random() < 0.15) {
+              this.powerUps.push({
+                x: s.x + S_W / 2 - PU_W / 2,
+                y: s.y + S_H / 2,
+                vy: 52,
+              });
+            }
+            this.saucer = null;
+            this.saucerTimer = 12 + Math.random() * 8;
+          } else {
+            this.explode(b.x, s.y + S_H / 2, 6);
+          }
+          break;
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
     }
 
     // laser vs enemy
@@ -330,6 +405,17 @@ export class Game {
     for (const e of this.enemies) {
       if (!e.alive) continue;
       drawAlien(ctx, Math.floor(e.x), Math.floor(e.y), Math.floor(this.t * 2) % 2 === 0);
+    }
+
+    // platillo veloz
+    if (this.saucer) {
+      drawSaucer(
+        ctx,
+        Math.floor(this.saucer.x),
+        Math.floor(this.saucer.y),
+        this.saucer.flash > 0,
+        Math.floor(this.t * 6) % 2 === 0,
+      );
     }
 
     // power-ups
@@ -488,4 +574,29 @@ function drawPowerUp(ctx: CanvasRenderingContext2D, x: number, y: number, pulse:
   ctx.fillStyle = PALETTE.powerWhite;
   ctx.fillRect(x + 3, y + 3, 1, 1);
   ctx.fillRect(x + 6, y + 3, 1, 1);
+}
+
+function drawSaucer(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  blink: boolean,
+) {
+  const body = flash ? PALETTE.fire2 : PALETTE.saucer;
+  const dark = flash ? PALETTE.fire2 : PALETTE.saucerDark;
+  const light = flash ? PALETTE.fire1 : PALETTE.saucerLight;
+  // cúpula
+  ctx.fillStyle = light;
+  ctx.fillRect(x + 8, y, 4, 2);
+  ctx.fillRect(x + 6, y + 2, 8, 2);
+  // cuerpo
+  ctx.fillStyle = body;
+  ctx.fillRect(x + 2, y + 4, 16, 2);
+  ctx.fillRect(x, y + 6, 20, 2);
+  // luces inferiores
+  ctx.fillStyle = blink ? PALETTE.powerWhite : dark;
+  ctx.fillRect(x + 3, y + 6, 2, 2);
+  ctx.fillRect(x + 9, y + 6, 2, 2);
+  ctx.fillRect(x + 15, y + 6, 2, 2);
 }
