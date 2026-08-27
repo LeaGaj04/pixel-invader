@@ -39,6 +39,7 @@ interface Bullet {
   x: number;
   y: number;
   vy: number;
+  vx?: number;
 }
 interface Enemy {
   x: number;
