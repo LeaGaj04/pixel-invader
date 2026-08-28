@@ -240,7 +240,10 @@ export class Game {
 
     for (const b of this.bullets) b.y += b.vy * dt;
     this.bullets = this.bullets.filter((b) => b.y > -10);
-    for (const b of this.eBullets) b.y += b.vy * dt;
+    for (const b of this.eBullets) {
+      b.y += b.vy * dt;
+      if (b.vx) b.x += b.vx * dt;
+    }
     this.eBullets = this.eBullets.filter((b) => b.y < GAME_H + 10);
 
     // power-ups caen y son recogidos
