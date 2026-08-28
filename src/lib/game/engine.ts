@@ -299,40 +299,103 @@ export class Game {
       }
     }
 
-    // formation movement
-    const alive = this.enemies.filter((e) => e.alive);
-    if (alive.length === 0) {
-      this.wave++;
-      this.spawnWave();
-      return;
-    }
-    const base = 16 + (ROWS * COLS - alive.length) * 2.2 + (this.wave - 1) * 8;
-    if (this.stepDown > 0) {
-      const d = Math.min(this.stepDown, 60 * dt);
-      for (const e of this.enemies) e.y += d;
-      this.stepDown -= d;
-    } else {
-      const dx = base * this.dir * dt;
-      for (const e of this.enemies) e.x += dx;
-      const minX = Math.min(...alive.map((e) => e.x));
-      const maxX = Math.max(...alive.map((e) => e.x + E_W));
-      if (minX < 6 || maxX > GAME_W - 6) {
-        this.dir *= -1;
-        this.stepDown = 8;
-        for (const e of this.enemies) e.x += this.dir * 2;
-      }
+    // Fase 3: jefe final (nave nodriza)
+    if (!this.boss && !this.bossDefeated && this.score >= PHASE3_SCORE) {
+      for (const e of this.enemies) e.alive = false;
+      this.eBullets = [];
+      this.saucer = null;
+      this.boss = {
+        x: GAME_W / 2 - B_W / 2,
+        y: B_Y,
+        vx: 18,
+        hp: BOSS_HP,
+        flash: 0,
+        fireTimer: 1.6,
+      };
     }
 
-    // enemy fire (only lowest per column)
-    if (Math.random() < (0.5 + this.wave * 0.15) * dt) {
-      const cols = new Map<number, Enemy>();
-      for (const e of alive) {
-        const cur = cols.get(e.col);
-        if (!cur || e.y > cur.y) cols.set(e.col, e);
+    if (this.boss) {
+      const bo = this.boss;
+      bo.x += bo.vx * dt;
+      if (bo.x < 8) {
+        bo.x = 8;
+        bo.vx = Math.abs(bo.vx);
+      } else if (bo.x > GAME_W - B_W - 8) {
+        bo.x = GAME_W - B_W - 8;
+        bo.vx = -Math.abs(bo.vx);
       }
-      const shooters = [...cols.values()];
-      const s = shooters[Math.floor(Math.random() * shooters.length)];
-      if (s) this.eBullets.push({ x: s.x + E_W / 2, y: s.y + E_H, vy: 90 + this.wave * 8 });
+      if (bo.flash > 0) bo.flash -= dt;
+
+      bo.fireTimer -= dt;
+      if (bo.fireTimer <= 0) {
+        bo.fireTimer = 1.5 + Math.random() * 0.8;
+        const cx = bo.x + B_W / 2;
+        const cy = bo.y + B_H;
+        for (const vx of [-55, 0, 55]) this.eBullets.push({ x: cx, y: cy, vx, vy: 95 });
+      }
+
+      for (const b of this.bullets) {
+        if (b.x >= bo.x && b.x <= bo.x + B_W && b.y >= bo.y && b.y <= bo.y + B_H) {
+          b.y = -100;
+          bo.hp--;
+          bo.flash = 0.12;
+          if (bo.hp <= 0) {
+            this.score += BOSS_SCORE;
+            this.explode(bo.x + B_W / 2, bo.y + B_H / 2, 70);
+            this.boss = null;
+            this.bossDefeated = true;
+            this.waveSpeed = 3;
+            this.wave++;
+            this.spawnWave();
+          } else {
+            this.explode(b.x, bo.y + B_H - 2, 5);
+          }
+          break;
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
+    }
+
+    // formation movement
+    const alive = this.boss ? [] : this.enemies.filter((e) => e.alive);
+    if (!this.boss) {
+      if (alive.length === 0) {
+        this.wave++;
+        this.spawnWave();
+        return;
+      }
+      const base =
+        16 +
+        (ROWS * COLS - alive.length) * 2.2 +
+        (this.wave - 1) * 8 +
+        this.waveSpeed * 6;
+      if (this.stepDown > 0) {
+        const d = Math.min(this.stepDown, 60 * dt);
+        for (const e of this.enemies) e.y += d;
+        this.stepDown -= d;
+      } else {
+        const dx = base * this.dir * dt;
+        for (const e of this.enemies) e.x += dx;
+        const minX = Math.min(...alive.map((e) => e.x));
+        const maxX = Math.max(...alive.map((e) => e.x + E_W));
+        if (minX < 6 || maxX > GAME_W - 6) {
+          this.dir *= -1;
+          this.stepDown = 8;
+          for (const e of this.enemies) e.x += this.dir * 2;
+        }
+      }
+
+      // enemy fire (only lowest per column)
+      if (Math.random() < (0.5 + this.wave * 0.15 + this.waveSpeed * 0.1) * dt) {
+        const cols = new Map<number, Enemy>();
+        for (const e of alive) {
+          const cur = cols.get(e.col);
+          if (!cur || e.y > cur.y) cols.set(e.col, e);
+        }
+        const shooters = [...cols.values()];
+        const s = shooters[Math.floor(Math.random() * shooters.length)];
+        if (s) this.eBullets.push({ x: s.x + E_W / 2, y: s.y + E_H, vy: 90 + this.wave * 8 });
+      }
     }
 
     // laser vs platillo (vuela por encima de la formación)
