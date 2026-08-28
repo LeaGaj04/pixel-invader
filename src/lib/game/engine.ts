@@ -68,6 +68,14 @@ interface Saucer {
   hp: number;
   flash: number;
 }
+interface Boss {
+  x: number;
+  y: number;
+  vx: number;
+  hp: number;
+  flash: number;
+  fireTimer: number;
+}
 
 const PU_W = 10;
 const PU_H = 10;
@@ -77,6 +85,13 @@ const S_Y = 20;
 const SAUCER_HP = 3;
 const SAUCER_SCORE = 500;
 
+export const PHASE2_SCORE = 700;
+export const PHASE3_SCORE = 1500;
+const B_W = 72;
+const B_H = 32;
+const B_Y = 26;
+const BOSS_HP = 20;
+const BOSS_SCORE = 2000;
 
 const ROWS = 3;
 const COLS = 6;
@@ -101,6 +116,9 @@ export class Game {
   private powerUps: PowerUp[] = [];
   private saucer: Saucer | null = null;
   private saucerTimer = 6 + Math.random() * 6;
+  boss: Boss | null = null;
+  private bossDefeated = false;
+  private waveSpeed = 0;
   doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
   private cooldown = 0;
@@ -153,6 +171,9 @@ export class Game {
     this.particles = [];
     this.invuln = 0;
     this.doubleShot = 0;
+    this.boss = null;
+    this.bossDefeated = false;
+    this.waveSpeed = 0;
     this.spawnWave();
   }
 
@@ -219,7 +240,10 @@ export class Game {
 
     for (const b of this.bullets) b.y += b.vy * dt;
     this.bullets = this.bullets.filter((b) => b.y > -10);
-    for (const b of this.eBullets) b.y += b.vy * dt;
+    for (const b of this.eBullets) {
+      b.y += b.vy * dt;
+      if (b.vx) b.x += b.vx * dt;
+    }
     this.eBullets = this.eBullets.filter((b) => b.y < GAME_H + 10);
 
     // power-ups caen y son recogidos
@@ -263,7 +287,7 @@ export class Game {
         s.vx = -Math.abs(s.vx);
       }
       if (s.flash > 0) s.flash -= dt;
-    } else {
+    } else if (this.score >= PHASE2_SCORE && !this.boss) {
       this.saucerTimer -= dt;
       if (this.saucerTimer <= 0) {
         const dir = Math.random() < 0.5 ? 1 : -1;
@@ -278,40 +302,103 @@ export class Game {
       }
     }
 
-    // formation movement
-    const alive = this.enemies.filter((e) => e.alive);
-    if (alive.length === 0) {
-      this.wave++;
-      this.spawnWave();
-      return;
-    }
-    const base = 16 + (ROWS * COLS - alive.length) * 2.2 + (this.wave - 1) * 8;
-    if (this.stepDown > 0) {
-      const d = Math.min(this.stepDown, 60 * dt);
-      for (const e of this.enemies) e.y += d;
-      this.stepDown -= d;
-    } else {
-      const dx = base * this.dir * dt;
-      for (const e of this.enemies) e.x += dx;
-      const minX = Math.min(...alive.map((e) => e.x));
-      const maxX = Math.max(...alive.map((e) => e.x + E_W));
-      if (minX < 6 || maxX > GAME_W - 6) {
-        this.dir *= -1;
-        this.stepDown = 8;
-        for (const e of this.enemies) e.x += this.dir * 2;
-      }
+    // Fase 3: jefe final (nave nodriza)
+    if (!this.boss && !this.bossDefeated && this.score >= PHASE3_SCORE) {
+      for (const e of this.enemies) e.alive = false;
+      this.eBullets = [];
+      this.saucer = null;
+      this.boss = {
+        x: GAME_W / 2 - B_W / 2,
+        y: B_Y,
+        vx: 18,
+        hp: BOSS_HP,
+        flash: 0,
+        fireTimer: 1.6,
+      };
     }
 
-    // enemy fire (only lowest per column)
-    if (Math.random() < (0.5 + this.wave * 0.15) * dt) {
-      const cols = new Map<number, Enemy>();
-      for (const e of alive) {
-        const cur = cols.get(e.col);
-        if (!cur || e.y > cur.y) cols.set(e.col, e);
+    if (this.boss) {
+      const bo = this.boss;
+      bo.x += bo.vx * dt;
+      if (bo.x < 8) {
+        bo.x = 8;
+        bo.vx = Math.abs(bo.vx);
+      } else if (bo.x > GAME_W - B_W - 8) {
+        bo.x = GAME_W - B_W - 8;
+        bo.vx = -Math.abs(bo.vx);
       }
-      const shooters = [...cols.values()];
-      const s = shooters[Math.floor(Math.random() * shooters.length)];
-      if (s) this.eBullets.push({ x: s.x + E_W / 2, y: s.y + E_H, vy: 90 + this.wave * 8 });
+      if (bo.flash > 0) bo.flash -= dt;
+
+      bo.fireTimer -= dt;
+      if (bo.fireTimer <= 0) {
+        bo.fireTimer = 1.5 + Math.random() * 0.8;
+        const cx = bo.x + B_W / 2;
+        const cy = bo.y + B_H;
+        for (const vx of [-55, 0, 55]) this.eBullets.push({ x: cx, y: cy, vx, vy: 95 });
+      }
+
+      for (const b of this.bullets) {
+        if (b.x >= bo.x && b.x <= bo.x + B_W && b.y >= bo.y && b.y <= bo.y + B_H) {
+          b.y = -100;
+          bo.hp--;
+          bo.flash = 0.12;
+          if (bo.hp <= 0) {
+            this.score += BOSS_SCORE;
+            this.explode(bo.x + B_W / 2, bo.y + B_H / 2, 70);
+            this.boss = null;
+            this.bossDefeated = true;
+            this.waveSpeed = 3;
+            this.wave++;
+            this.spawnWave();
+          } else {
+            this.explode(b.x, bo.y + B_H - 2, 5);
+          }
+          break;
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
+    }
+
+    // formation movement
+    const alive = this.boss ? [] : this.enemies.filter((e) => e.alive);
+    if (!this.boss) {
+      if (alive.length === 0) {
+        this.wave++;
+        this.spawnWave();
+        return;
+      }
+      const base =
+        16 +
+        (ROWS * COLS - alive.length) * 2.2 +
+        (this.wave - 1) * 8 +
+        this.waveSpeed * 6;
+      if (this.stepDown > 0) {
+        const d = Math.min(this.stepDown, 60 * dt);
+        for (const e of this.enemies) e.y += d;
+        this.stepDown -= d;
+      } else {
+        const dx = base * this.dir * dt;
+        for (const e of this.enemies) e.x += dx;
+        const minX = Math.min(...alive.map((e) => e.x));
+        const maxX = Math.max(...alive.map((e) => e.x + E_W));
+        if (minX < 6 || maxX > GAME_W - 6) {
+          this.dir *= -1;
+          this.stepDown = 8;
+          for (const e of this.enemies) e.x += this.dir * 2;
+        }
+      }
+
+      // enemy fire (only lowest per column)
+      if (Math.random() < (0.5 + this.wave * 0.15 + this.waveSpeed * 0.1) * dt) {
+        const cols = new Map<number, Enemy>();
+        for (const e of alive) {
+          const cur = cols.get(e.col);
+          if (!cur || e.y > cur.y) cols.set(e.col, e);
+        }
+        const shooters = [...cols.values()];
+        const s = shooters[Math.floor(Math.random() * shooters.length)];
+        if (s) this.eBullets.push({ x: s.x + E_W / 2, y: s.y + E_H, vy: 90 + this.wave * 8 });
+      }
     }
 
     // laser vs platillo (vuela por encima de la formación)
@@ -406,6 +493,28 @@ export class Game {
     for (const e of this.enemies) {
       if (!e.alive) continue;
       drawAlien(ctx, Math.floor(e.x), Math.floor(e.y), Math.floor(this.t * 2) % 2 === 0);
+    }
+
+    // jefe final
+    if (this.boss) {
+      drawBoss(
+        ctx,
+        Math.floor(this.boss.x),
+        Math.floor(this.boss.y),
+        this.boss.flash > 0,
+        Math.floor(this.t * 5) % 2 === 0,
+      );
+      // barra de vida del jefe
+      const bw = GAME_W - 80;
+      const bx = 40;
+      const by = GAME_H - 8;
+      ctx.fillStyle = PALETTE.powerBase;
+      ctx.fillRect(bx, by, bw, 4);
+      ctx.fillStyle = PALETTE.fire2;
+      ctx.fillRect(bx, by, Math.round((bw * this.boss.hp) / BOSS_HP), 4);
+      ctx.strokeStyle = PALETTE.powerNeon;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 3);
     }
 
     // platillo veloz
@@ -600,4 +709,52 @@ function drawSaucer(
   ctx.fillRect(x + 3, y + 6, 2, 2);
   ctx.fillRect(x + 9, y + 6, 2, 2);
   ctx.fillRect(x + 15, y + 6, 2, 2);
+}
+
+function drawBoss(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  blink: boolean,
+) {
+  const hull = flash ? PALETTE.fire2 : "#0a0a14";
+  const plate = flash ? "#ff6b6b" : "#161a2b";
+  const neon = flash ? PALETTE.fire1 : PALETTE.powerNeon;
+  const glow = flash ? PALETTE.fire1 : PALETTE.powerGlow;
+
+  // cuerpo principal
+  ctx.fillStyle = hull;
+  ctx.fillRect(x + 12, y, B_W - 24, 6);
+  ctx.fillRect(x + 4, y + 6, B_W - 8, 12);
+  ctx.fillRect(x, y + 12, B_W, 8);
+  ctx.fillRect(x + 10, y + 20, B_W - 20, 6);
+
+  // placas
+  ctx.fillStyle = plate;
+  ctx.fillRect(x + 16, y + 2, B_W - 32, 4);
+  ctx.fillRect(x + 8, y + 14, B_W - 16, 4);
+
+  // núcleo neón
+  ctx.fillStyle = glow;
+  ctx.fillRect(x + B_W / 2 - 8, y + 8, 16, 8);
+  ctx.fillStyle = neon;
+  ctx.fillRect(x + B_W / 2 - 6, y + 10, 12, 4);
+  ctx.fillStyle = PALETTE.powerWhite;
+  ctx.fillRect(x + B_W / 2 - 2, y + 11, 4, 2);
+
+  // franjas laterales
+  ctx.fillStyle = neon;
+  ctx.fillRect(x + 2, y + 14, 6, 2);
+  ctx.fillRect(x + B_W - 8, y + 14, 6, 2);
+
+  // cañones inferiores
+  ctx.fillStyle = hull;
+  ctx.fillRect(x + 14, y + 26, 6, 6);
+  ctx.fillRect(x + B_W / 2 - 3, y + 26, 6, 6);
+  ctx.fillRect(x + B_W - 20, y + 26, 6, 6);
+  ctx.fillStyle = blink ? PALETTE.powerWhite : neon;
+  ctx.fillRect(x + 16, y + 30, 2, 2);
+  ctx.fillRect(x + B_W / 2 - 1, y + 30, 2, 2);
+  ctx.fillRect(x + B_W - 18, y + 30, 2, 2);
 }
