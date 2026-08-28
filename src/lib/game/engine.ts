@@ -710,3 +710,51 @@ function drawSaucer(
   ctx.fillRect(x + 9, y + 6, 2, 2);
   ctx.fillRect(x + 15, y + 6, 2, 2);
 }
+
+function drawBoss(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  blink: boolean,
+) {
+  const hull = flash ? PALETTE.fire2 : "#0a0a14";
+  const plate = flash ? "#ff6b6b" : "#161a2b";
+  const neon = flash ? PALETTE.fire1 : PALETTE.powerNeon;
+  const glow = flash ? PALETTE.fire1 : PALETTE.powerGlow;
+
+  // cuerpo principal
+  ctx.fillStyle = hull;
+  ctx.fillRect(x + 12, y, B_W - 24, 6);
+  ctx.fillRect(x + 4, y + 6, B_W - 8, 12);
+  ctx.fillRect(x, y + 12, B_W, 8);
+  ctx.fillRect(x + 10, y + 20, B_W - 20, 6);
+
+  // placas
+  ctx.fillStyle = plate;
+  ctx.fillRect(x + 16, y + 2, B_W - 32, 4);
+  ctx.fillRect(x + 8, y + 14, B_W - 16, 4);
+
+  // núcleo neón
+  ctx.fillStyle = glow;
+  ctx.fillRect(x + B_W / 2 - 8, y + 8, 16, 8);
+  ctx.fillStyle = neon;
+  ctx.fillRect(x + B_W / 2 - 6, y + 10, 12, 4);
+  ctx.fillStyle = PALETTE.powerWhite;
+  ctx.fillRect(x + B_W / 2 - 2, y + 11, 4, 2);
+
+  // franjas laterales
+  ctx.fillStyle = neon;
+  ctx.fillRect(x + 2, y + 14, 6, 2);
+  ctx.fillRect(x + B_W - 8, y + 14, 6, 2);
+
+  // cañones inferiores
+  ctx.fillStyle = hull;
+  ctx.fillRect(x + 14, y + 26, 6, 6);
+  ctx.fillRect(x + B_W / 2 - 3, y + 26, 6, 6);
+  ctx.fillRect(x + B_W - 20, y + 26, 6, 6);
+  ctx.fillStyle = blink ? PALETTE.powerWhite : neon;
+  ctx.fillRect(x + 16, y + 30, 2, 2);
+  ctx.fillRect(x + B_W / 2 - 1, y + 30, 2, 2);
+  ctx.fillRect(x + B_W - 18, y + 30, 2, 2);
+}
