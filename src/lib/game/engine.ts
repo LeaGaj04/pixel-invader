@@ -116,6 +116,9 @@ export class Game {
   private powerUps: PowerUp[] = [];
   private saucer: Saucer | null = null;
   private saucerTimer = 6 + Math.random() * 6;
+  boss: Boss | null = null;
+  private bossDefeated = false;
+  private waveSpeed = 0;
   doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
   private cooldown = 0;
