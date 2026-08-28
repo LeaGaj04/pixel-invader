@@ -68,6 +68,14 @@ interface Saucer {
   hp: number;
   flash: number;
 }
+interface Boss {
+  x: number;
+  y: number;
+  vx: number;
+  hp: number;
+  flash: number;
+  fireTimer: number;
+}
 
 const PU_W = 10;
 const PU_H = 10;
@@ -77,6 +85,13 @@ const S_Y = 20;
 const SAUCER_HP = 3;
 const SAUCER_SCORE = 500;
 
+export const PHASE2_SCORE = 700;
+export const PHASE3_SCORE = 1500;
+const B_W = 72;
+const B_H = 32;
+const B_Y = 26;
+const BOSS_HP = 20;
+const BOSS_SCORE = 2000;
 
 const ROWS = 3;
 const COLS = 6;
