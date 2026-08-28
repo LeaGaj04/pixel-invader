@@ -495,6 +495,28 @@ export class Game {
       drawAlien(ctx, Math.floor(e.x), Math.floor(e.y), Math.floor(this.t * 2) % 2 === 0);
     }
 
+    // jefe final
+    if (this.boss) {
+      drawBoss(
+        ctx,
+        Math.floor(this.boss.x),
+        Math.floor(this.boss.y),
+        this.boss.flash > 0,
+        Math.floor(this.t * 5) % 2 === 0,
+      );
+      // barra de vida del jefe
+      const bw = GAME_W - 80;
+      const bx = 40;
+      const by = GAME_H - 8;
+      ctx.fillStyle = PALETTE.powerBase;
+      ctx.fillRect(bx, by, bw, 4);
+      ctx.fillStyle = PALETTE.fire2;
+      ctx.fillRect(bx, by, Math.round((bw * this.boss.hp) / BOSS_HP), 4);
+      ctx.strokeStyle = PALETTE.powerNeon;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 3);
+    }
+
     // platillo veloz
     if (this.saucer) {
       drawSaucer(
