@@ -171,6 +171,9 @@ export class Game {
     this.particles = [];
     this.invuln = 0;
     this.doubleShot = 0;
+    this.boss = null;
+    this.bossDefeated = false;
+    this.waveSpeed = 0;
     this.spawnWave();
   }
 
