@@ -284,7 +284,7 @@ export class Game {
         s.vx = -Math.abs(s.vx);
       }
       if (s.flash > 0) s.flash -= dt;
-    } else {
+    } else if (this.score >= PHASE2_SCORE && !this.boss) {
       this.saucerTimer -= dt;
       if (this.saucerTimer <= 0) {
         const dir = Math.random() < 0.5 ? 1 : -1;
