@@ -162,6 +162,20 @@ export class Game {
 
   private spawnWave() {
     this.enemies = [];
+    this.dir = 1;
+    this.eBullets = [];
+    this.bullets = [];
+    this.powerUps = [];
+    this.saucer = null;
+    this.saucerTimer = 6 + Math.random() * 6;
+
+    // Fase 4: la cuadrícula morada queda desactivada; llegan escuadrones verdes
+    if (this.bossDefeated) {
+      this.fighters = [];
+      this.squadTimer = 0.6;
+      return;
+    }
+
     const totalW = COLS * E_W + (COLS - 1) * E_GAP_X;
     const startX = (GAME_W - totalW) / 2;
     for (let r = 0; r < ROWS; r++) {
@@ -175,13 +189,27 @@ export class Game {
         });
       }
     }
-    this.dir = 1;
-    this.eBullets = [];
-    this.bullets = [];
-    this.powerUps = [];
-    this.saucer = null;
-    this.saucerTimer = 6 + Math.random() * 6;
   }
+
+  // 2 grupos de 3 cazas verdes en formación táctica
+  private spawnSquadrons() {
+    const speed = 110 + this.wave * 6 + Math.random() * 30;
+    for (let g = 0; g < 2; g++) {
+      const dir = g === 0 ? 1 : -1;
+      const baseX = g === 0 ? 24 : GAME_W - 24 - F_W;
+      for (let i = 0; i < 3; i++) {
+        this.fighters.push({
+          x: baseX + dir * i * (F_W + 6),
+          y: F_TOP + i * 8,
+          vx: speed * dir,
+          vy: 34 + Math.random() * 18,
+          hp: FIGHTER_HP,
+          flash: 0,
+        });
+      }
+    }
+  }
+
 
   start() {
     this.state = "playing";
