@@ -897,3 +897,32 @@ function drawBoss(
   ctx.fillRect(x + B_W / 2 - 1, y + 30, 2, 2);
   ctx.fillRect(x + B_W - 18, y + 30, 2, 2);
 }
+
+function drawFighter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  blink: boolean,
+) {
+  const body = flash ? PALETTE.powerWhite : PALETTE.fighter;
+  const dark = flash ? PALETTE.fire1 : PALETTE.fighterDark;
+  const light = flash ? PALETTE.fire2 : PALETTE.fighterLight;
+  // morro
+  ctx.fillStyle = body;
+  ctx.fillRect(x + 5, y, 2, 3);
+  ctx.fillRect(x + 4, y + 3, 4, 2);
+  // alas en delta
+  ctx.fillRect(x + 2, y + 5, 8, 2);
+  ctx.fillRect(x, y + 7, 12, 2);
+  // motores
+  ctx.fillStyle = dark;
+  ctx.fillRect(x + 1, y + 5, 2, 2);
+  ctx.fillRect(x + 9, y + 5, 2, 2);
+  ctx.fillStyle = blink ? light : dark;
+  ctx.fillRect(x + 2, y + 9, 2, 1);
+  ctx.fillRect(x + 8, y + 9, 2, 1);
+  // cabina
+  ctx.fillStyle = light;
+  ctx.fillRect(x + 5, y + 4, 2, 2);
+}
