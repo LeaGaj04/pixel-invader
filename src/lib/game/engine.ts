@@ -23,7 +23,11 @@ export const PALETTE = {
   saucer: "#ffd23f",
   saucerDark: "#b8860b",
   saucerLight: "#fff3c4",
+  fighter: "#4dff2f",
+  fighterDark: "#127a1f",
+  fighterLight: "#d7ffcf",
 };
+
 
 export const POWER_DURATION = 10;
 
@@ -76,6 +80,14 @@ interface Boss {
   flash: number;
   fireTimer: number;
 }
+interface Fighter {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hp: number;
+  flash: number;
+}
 
 const PU_W = 10;
 const PU_H = 10;
@@ -90,8 +102,15 @@ export const PHASE3_SCORE = 1500;
 const B_W = 72;
 const B_H = 32;
 const B_Y = 26;
-const BOSS_HP = 20;
+const BOSS_HP = 45;
 const BOSS_SCORE = 2000;
+
+const F_W = 12;
+const F_H = 10;
+const FIGHTER_HP = 2;
+const FIGHTER_SCORE = 150;
+const F_TOP = 14;
+
 
 const ROWS = 3;
 const COLS = 6;
@@ -118,6 +137,8 @@ export class Game {
   private saucerTimer = 6 + Math.random() * 6;
   boss: Boss | null = null;
   private bossDefeated = false;
+  private fighters: Fighter[] = [];
+  private squadTimer = 0;
   private waveSpeed = 0;
   doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
@@ -141,6 +162,20 @@ export class Game {
 
   private spawnWave() {
     this.enemies = [];
+    this.dir = 1;
+    this.eBullets = [];
+    this.bullets = [];
+    this.powerUps = [];
+    this.saucer = null;
+    this.saucerTimer = 6 + Math.random() * 6;
+
+    // Fase 4: la cuadrícula morada queda desactivada; llegan escuadrones verdes
+    if (this.bossDefeated) {
+      this.fighters = [];
+      this.squadTimer = 0.6;
+      return;
+    }
+
     const totalW = COLS * E_W + (COLS - 1) * E_GAP_X;
     const startX = (GAME_W - totalW) / 2;
     for (let r = 0; r < ROWS; r++) {
@@ -154,13 +189,27 @@ export class Game {
         });
       }
     }
-    this.dir = 1;
-    this.eBullets = [];
-    this.bullets = [];
-    this.powerUps = [];
-    this.saucer = null;
-    this.saucerTimer = 6 + Math.random() * 6;
   }
+
+  // 2 grupos de 3 cazas verdes en formación táctica
+  private spawnSquadrons() {
+    const speed = 110 + this.wave * 6 + Math.random() * 30;
+    for (let g = 0; g < 2; g++) {
+      const dir = g === 0 ? 1 : -1;
+      const baseX = g === 0 ? 24 : GAME_W - 24 - F_W;
+      for (let i = 0; i < 3; i++) {
+        this.fighters.push({
+          x: baseX + dir * i * (F_W + 6),
+          y: F_TOP + i * 8,
+          vx: speed * dir,
+          vy: 34 + Math.random() * 18,
+          hp: FIGHTER_HP,
+          flash: 0,
+        });
+      }
+    }
+  }
+
 
   start() {
     this.state = "playing";
@@ -173,6 +222,8 @@ export class Game {
     this.doubleShot = 0;
     this.boss = null;
     this.bossDefeated = false;
+    this.fighters = [];
+    this.squadTimer = 0;
     this.waveSpeed = 0;
     this.spawnWave();
   }
@@ -359,9 +410,84 @@ export class Game {
       this.bullets = this.bullets.filter((b) => b.y > -10);
     }
 
+    // Fase 4: escuadrones de cazas verdes en zigzag
+    if (this.bossDefeated && !this.boss) {
+      if (this.fighters.length === 0) {
+        this.squadTimer -= dt;
+        if (this.squadTimer <= 0) {
+          this.wave++;
+          this.squadTimer = 1.2;
+          this.spawnSquadrons();
+        }
+      }
+      const fBottom = GAME_H - 58;
+      const playerTop = GAME_H - 24;
+      for (const f of this.fighters) {
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        if (f.x < 4) {
+          f.x = 4;
+          f.vx = Math.abs(f.vx);
+        } else if (f.x > GAME_W - F_W - 4) {
+          f.x = GAME_W - F_W - 4;
+          f.vx = -Math.abs(f.vx);
+        }
+        if (f.y < F_TOP) {
+          f.y = F_TOP;
+          f.vy = Math.abs(f.vy);
+        } else if (f.y > fBottom) {
+          f.y = fBottom;
+          f.vy = -Math.abs(f.vy);
+        }
+        if (f.flash > 0) f.flash -= dt;
+
+        // disparo esporádico
+        if (Math.random() < 0.35 * dt) {
+          this.eBullets.push({ x: f.x + F_W / 2, y: f.y + F_H, vy: 130 + this.wave * 4 });
+        }
+
+        // choque contra la nave
+        if (
+          this.invuln <= 0 &&
+          f.y + F_H >= playerTop &&
+          f.x + F_W >= this.px &&
+          f.x <= this.px + P_W
+        ) {
+          this.explode(f.x + F_W / 2, f.y + F_H / 2, 20);
+          f.hp = 0;
+          this.hit();
+        }
+      }
+
+      // laser vs cazas
+      for (const b of this.bullets) {
+        for (const f of this.fighters) {
+          if (f.hp <= 0) continue;
+          if (b.x >= f.x && b.x <= f.x + F_W && b.y >= f.y && b.y <= f.y + F_H) {
+            b.y = -100;
+            f.hp--;
+            f.flash = 0.18;
+            if (f.hp <= 0) {
+              this.score += FIGHTER_SCORE;
+              this.explode(f.x + F_W / 2, f.y + F_H / 2, 22);
+              if (Math.random() < 0.15) {
+                this.powerUps.push({ x: f.x + F_W / 2 - PU_W / 2, y: f.y + F_H / 2, vy: 52 });
+              }
+            } else {
+              this.explode(b.x, f.y + F_H / 2, 5);
+            }
+            break;
+          }
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
+      this.fighters = this.fighters.filter((f) => f.hp > 0);
+    }
+
     // formation movement
-    const alive = this.boss ? [] : this.enemies.filter((e) => e.alive);
-    if (!this.boss) {
+    const alive = this.boss || this.bossDefeated ? [] : this.enemies.filter((e) => e.alive);
+    if (!this.boss && !this.bossDefeated) {
+
       if (alive.length === 0) {
         this.wave++;
         this.spawnWave();
@@ -527,6 +653,19 @@ export class Game {
         Math.floor(this.t * 6) % 2 === 0,
       );
     }
+
+    // cazas verdes de élite
+    for (const f of this.fighters) {
+      drawFighter(
+        ctx,
+        Math.floor(f.x),
+        Math.floor(f.y),
+        f.flash > 0,
+        Math.floor(this.t * 8) % 2 === 0,
+      );
+    }
+
+
 
     // power-ups
     for (const p of this.powerUps) {
@@ -757,4 +896,33 @@ function drawBoss(
   ctx.fillRect(x + 16, y + 30, 2, 2);
   ctx.fillRect(x + B_W / 2 - 1, y + 30, 2, 2);
   ctx.fillRect(x + B_W - 18, y + 30, 2, 2);
+}
+
+function drawFighter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  blink: boolean,
+) {
+  const body = flash ? PALETTE.powerWhite : PALETTE.fighter;
+  const dark = flash ? PALETTE.fire1 : PALETTE.fighterDark;
+  const light = flash ? PALETTE.fire2 : PALETTE.fighterLight;
+  // morro
+  ctx.fillStyle = body;
+  ctx.fillRect(x + 5, y, 2, 3);
+  ctx.fillRect(x + 4, y + 3, 4, 2);
+  // alas en delta
+  ctx.fillRect(x + 2, y + 5, 8, 2);
+  ctx.fillRect(x, y + 7, 12, 2);
+  // motores
+  ctx.fillStyle = dark;
+  ctx.fillRect(x + 1, y + 5, 2, 2);
+  ctx.fillRect(x + 9, y + 5, 2, 2);
+  ctx.fillStyle = blink ? light : dark;
+  ctx.fillRect(x + 2, y + 9, 2, 1);
+  ctx.fillRect(x + 8, y + 9, 2, 1);
+  // cabina
+  ctx.fillStyle = light;
+  ctx.fillRect(x + 5, y + 4, 2, 2);
 }
