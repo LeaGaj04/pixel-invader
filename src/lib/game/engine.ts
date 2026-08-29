@@ -137,6 +137,8 @@ export class Game {
   private saucerTimer = 6 + Math.random() * 6;
   boss: Boss | null = null;
   private bossDefeated = false;
+  private fighters: Fighter[] = [];
+  private squadTimer = 0;
   private waveSpeed = 0;
   doubleShot = 0;
   private px = GAME_W / 2 - P_W / 2;
