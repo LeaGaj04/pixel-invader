@@ -410,9 +410,84 @@ export class Game {
       this.bullets = this.bullets.filter((b) => b.y > -10);
     }
 
+    // Fase 4: escuadrones de cazas verdes en zigzag
+    if (this.bossDefeated && !this.boss) {
+      if (this.fighters.length === 0) {
+        this.squadTimer -= dt;
+        if (this.squadTimer <= 0) {
+          this.wave++;
+          this.squadTimer = 1.2;
+          this.spawnSquadrons();
+        }
+      }
+      const fBottom = GAME_H - 58;
+      const playerTop = GAME_H - 24;
+      for (const f of this.fighters) {
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        if (f.x < 4) {
+          f.x = 4;
+          f.vx = Math.abs(f.vx);
+        } else if (f.x > GAME_W - F_W - 4) {
+          f.x = GAME_W - F_W - 4;
+          f.vx = -Math.abs(f.vx);
+        }
+        if (f.y < F_TOP) {
+          f.y = F_TOP;
+          f.vy = Math.abs(f.vy);
+        } else if (f.y > fBottom) {
+          f.y = fBottom;
+          f.vy = -Math.abs(f.vy);
+        }
+        if (f.flash > 0) f.flash -= dt;
+
+        // disparo esporádico
+        if (Math.random() < 0.35 * dt) {
+          this.eBullets.push({ x: f.x + F_W / 2, y: f.y + F_H, vy: 130 + this.wave * 4 });
+        }
+
+        // choque contra la nave
+        if (
+          this.invuln <= 0 &&
+          f.y + F_H >= playerTop &&
+          f.x + F_W >= this.px &&
+          f.x <= this.px + P_W
+        ) {
+          this.explode(f.x + F_W / 2, f.y + F_H / 2, 20);
+          f.hp = 0;
+          this.hit();
+        }
+      }
+
+      // laser vs cazas
+      for (const b of this.bullets) {
+        for (const f of this.fighters) {
+          if (f.hp <= 0) continue;
+          if (b.x >= f.x && b.x <= f.x + F_W && b.y >= f.y && b.y <= f.y + F_H) {
+            b.y = -100;
+            f.hp--;
+            f.flash = 0.18;
+            if (f.hp <= 0) {
+              this.score += FIGHTER_SCORE;
+              this.explode(f.x + F_W / 2, f.y + F_H / 2, 22);
+              if (Math.random() < 0.15) {
+                this.powerUps.push({ x: f.x + F_W / 2 - PU_W / 2, y: f.y + F_H / 2, vy: 52 });
+              }
+            } else {
+              this.explode(b.x, f.y + F_H / 2, 5);
+            }
+            break;
+          }
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
+      this.fighters = this.fighters.filter((f) => f.hp > 0);
+    }
+
     // formation movement
-    const alive = this.boss ? [] : this.enemies.filter((e) => e.alive);
-    if (!this.boss) {
+    const alive = this.boss || this.bossDefeated ? [] : this.enemies.filter((e) => e.alive);
+    if (!this.boss && !this.bossDefeated) {
+
       if (alive.length === 0) {
         this.wave++;
         this.spawnWave();
