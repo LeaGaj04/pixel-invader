@@ -654,6 +654,19 @@ export class Game {
       );
     }
 
+    // cazas verdes de élite
+    for (const f of this.fighters) {
+      drawFighter(
+        ctx,
+        Math.floor(f.x),
+        Math.floor(f.y),
+        f.flash > 0,
+        Math.floor(this.t * 8) % 2 === 0,
+      );
+    }
+
+
+
     // power-ups
     for (const p of this.powerUps) {
       drawPowerUp(ctx, Math.floor(p.x), Math.floor(p.y), Math.floor(this.t * 8) % 2 === 0);
