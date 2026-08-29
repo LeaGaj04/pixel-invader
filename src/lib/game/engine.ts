@@ -222,6 +222,8 @@ export class Game {
     this.doubleShot = 0;
     this.boss = null;
     this.bossDefeated = false;
+    this.fighters = [];
+    this.squadTimer = 0;
     this.waveSpeed = 0;
     this.spawnWave();
   }
