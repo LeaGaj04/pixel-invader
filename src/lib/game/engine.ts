@@ -80,6 +80,14 @@ interface Boss {
   flash: number;
   fireTimer: number;
 }
+interface Fighter {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hp: number;
+  flash: number;
+}
 
 const PU_W = 10;
 const PU_H = 10;
@@ -94,8 +102,15 @@ export const PHASE3_SCORE = 1500;
 const B_W = 72;
 const B_H = 32;
 const B_Y = 26;
-const BOSS_HP = 20;
+const BOSS_HP = 45;
 const BOSS_SCORE = 2000;
+
+const F_W = 12;
+const F_H = 10;
+const FIGHTER_HP = 2;
+const FIGHTER_SCORE = 150;
+const F_TOP = 14;
+
 
 const ROWS = 3;
 const COLS = 6;
