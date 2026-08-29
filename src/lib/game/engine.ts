@@ -23,7 +23,11 @@ export const PALETTE = {
   saucer: "#ffd23f",
   saucerDark: "#b8860b",
   saucerLight: "#fff3c4",
+  fighter: "#4dff2f",
+  fighterDark: "#127a1f",
+  fighterLight: "#d7ffcf",
 };
+
 
 export const POWER_DURATION = 10;
 
