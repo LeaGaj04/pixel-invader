@@ -26,10 +26,14 @@ export const PALETTE = {
   fighter: "#4dff2f",
   fighterDark: "#127a1f",
   fighterLight: "#d7ffcf",
+  heavyBase: "#ff7a7a",
+  heavyDark: "#8f2323",
+  heavyCore: "#ffffff",
 };
 
 
 export const POWER_DURATION = 10;
+export const HEAVY_CHARGES = 3;
 
 type State = "start" | "playing" | "gameover";
 
@@ -44,6 +48,7 @@ interface Bullet {
   y: number;
   vy: number;
   vx?: number;
+  heavy?: boolean;
 }
 interface Enemy {
   x: number;
@@ -64,6 +69,7 @@ interface PowerUp {
   x: number;
   y: number;
   vy: number;
+  kind: "double" | "heavy";
 }
 interface Saucer {
   x: number;
@@ -141,6 +147,7 @@ export class Game {
   private squadTimer = 0;
   private waveSpeed = 0;
   doubleShot = 0;
+  heavyAmmo = 0;
   private px = GAME_W / 2 - P_W / 2;
   private cooldown = 0;
   private invuln = 0;
@@ -220,6 +227,7 @@ export class Game {
     this.particles = [];
     this.invuln = 0;
     this.doubleShot = 0;
+    this.heavyAmmo = 0;
     this.boss = null;
     this.bossDefeated = false;
     this.fighters = [];
@@ -279,7 +287,11 @@ export class Game {
     if (this.invuln > 0) this.invuln -= dt;
     if (this.doubleShot > 0) this.doubleShot = Math.max(0, this.doubleShot - dt);
     if (this.keys["Space"] && this.cooldown <= 0) {
-      if (this.doubleShot > 0) {
+      if (this.heavyAmmo > 0) {
+        this.heavyAmmo--;
+        this.cooldown = 0.45;
+        this.bullets.push({ x: this.px + P_W / 2, y: GAME_H - 24, vy: -200, heavy: true });
+      } else if (this.doubleShot > 0) {
         this.cooldown = 0.26;
         this.bullets.push({ x: this.px + 3, y: GAME_H - 22, vy: -270 });
         this.bullets.push({ x: this.px + P_W - 3, y: GAME_H - 22, vy: -270 });
@@ -308,7 +320,8 @@ export class Game {
         p.x + PU_W >= this.px &&
         p.x <= this.px + P_W;
       if (hit) {
-        this.doubleShot = POWER_DURATION;
+        if (p.kind === "heavy") this.heavyAmmo = HEAVY_CHARGES;
+        else this.doubleShot = POWER_DURATION;
         for (let i = 0; i < 14; i++) {
           const a = Math.random() * Math.PI * 2;
           const sp = 20 + Math.random() * 50;
@@ -318,7 +331,14 @@ export class Game {
             vx: Math.cos(a) * sp,
             vy: Math.sin(a) * sp,
             life: 0.25 + Math.random() * 0.35,
-            color: Math.random() < 0.5 ? PALETTE.powerNeon : PALETTE.powerWhite,
+            color:
+              p.kind === "heavy"
+                ? Math.random() < 0.5
+                  ? PALETTE.heavyBase
+                  : PALETTE.heavyCore
+                : Math.random() < 0.5
+                  ? PALETTE.powerNeon
+                  : PALETTE.powerWhite,
           });
         }
         return false;
@@ -390,7 +410,7 @@ export class Game {
 
       for (const b of this.bullets) {
         if (b.x >= bo.x && b.x <= bo.x + B_W && b.y >= bo.y && b.y <= bo.y + B_H) {
-          b.y = -100;
+          if (!b.heavy) b.y = -100;
           bo.hp--;
           bo.flash = 0.12;
           if (bo.hp <= 0) {
@@ -463,20 +483,33 @@ export class Game {
       for (const b of this.bullets) {
         for (const f of this.fighters) {
           if (f.hp <= 0) continue;
-          if (b.x >= f.x && b.x <= f.x + F_W && b.y >= f.y && b.y <= f.y + F_H) {
-            b.y = -100;
-            f.hp--;
+          const bw = b.heavy ? 5 : 1;
+          if (b.x + bw >= f.x && b.x - bw <= f.x + F_W && b.y >= f.y - 4 && b.y <= f.y + F_H) {
+            if (!b.heavy) b.y = -100;
+            f.hp = b.heavy ? 0 : f.hp - 1;
             f.flash = 0.18;
             if (f.hp <= 0) {
               this.score += FIGHTER_SCORE;
               this.explode(f.x + F_W / 2, f.y + F_H / 2, 22);
               if (Math.random() < 0.15) {
-                this.powerUps.push({ x: f.x + F_W / 2 - PU_W / 2, y: f.y + F_H / 2, vy: 52 });
+                this.powerUps.push({
+                  x: f.x + F_W / 2 - PU_W / 2,
+                  y: f.y + F_H / 2,
+                  vy: 52,
+                  kind: "double",
+                });
+              } else if (Math.random() < 0.1176) {
+                this.powerUps.push({
+                  x: f.x + F_W / 2 - PU_W / 2,
+                  y: f.y + F_H / 2,
+                  vy: 46,
+                  kind: "heavy",
+                });
               }
             } else {
               this.explode(b.x, f.y + F_H / 2, 5);
             }
-            break;
+            if (!b.heavy) break;
           }
         }
       }
@@ -532,7 +565,7 @@ export class Game {
       const s = this.saucer;
       for (const b of this.bullets) {
         if (b.x >= s.x && b.x <= s.x + S_W && b.y >= s.y && b.y <= s.y + S_H) {
-          b.y = -100;
+          if (!b.heavy) b.y = -100;
           s.hp--;
           s.flash = 0.15;
           if (s.hp <= 0) {
@@ -543,6 +576,7 @@ export class Game {
                 x: s.x + S_W / 2 - PU_W / 2,
                 y: s.y + S_H / 2,
                 vy: 52,
+                kind: "double",
               });
             }
             this.saucer = null;
@@ -561,7 +595,7 @@ export class Game {
       for (const e of alive) {
         if (b.x >= e.x && b.x <= e.x + E_W && b.y >= e.y && b.y <= e.y + E_H) {
           e.alive = false;
-          b.y = -100;
+          if (!b.heavy) b.y = -100;
           this.score += 10 * (ROWS - e.row);
           this.explode(e.x + E_W / 2, e.y + E_H / 2);
           if (Math.random() < 0.15) {
@@ -569,6 +603,7 @@ export class Game {
               x: e.x + E_W / 2 - PU_W / 2,
               y: e.y + E_H / 2,
               vy: 52,
+              kind: "double",
             });
           }
           break;
@@ -669,7 +704,9 @@ export class Game {
 
     // power-ups
     for (const p of this.powerUps) {
-      drawPowerUp(ctx, Math.floor(p.x), Math.floor(p.y), Math.floor(this.t * 8) % 2 === 0);
+      if (p.kind === "heavy")
+        drawHeavyPowerUp(ctx, Math.floor(p.x), Math.floor(p.y), Math.floor(this.t * 8) % 2 === 0);
+      else drawPowerUp(ctx, Math.floor(p.x), Math.floor(p.y), Math.floor(this.t * 8) % 2 === 0);
     }
 
     // bullets
@@ -677,7 +714,14 @@ export class Game {
     for (const b of this.bullets) {
       const x = Math.floor(b.x);
       const y = Math.floor(b.y);
-      if (twin) {
+      if (b.heavy) {
+        ctx.fillStyle = PALETTE.heavyDark;
+        ctx.fillRect(x - 4, y - 2, 9, 14);
+        ctx.fillStyle = PALETTE.heavyBase;
+        ctx.fillRect(x - 3, y - 1, 7, 12);
+        ctx.fillStyle = PALETTE.heavyCore;
+        ctx.fillRect(x - 1, y, 3, 10);
+      } else if (twin) {
         ctx.fillStyle = PALETTE.powerGlow;
         ctx.fillRect(x - 1, y, 4, 6);
         ctx.fillStyle = PALETTE.powerNeon;
@@ -711,6 +755,24 @@ export class Game {
     ctx.textAlign = "right";
     ctx.fillText(String(this.score).padStart(5, "0"), GAME_W - 6, 14);
     ctx.textAlign = "left";
+
+    // cargas del cañón pesado
+    for (let i = 0; i < HEAVY_CHARGES; i++) {
+      const cx = GAME_W - 6 - (HEAVY_CHARGES - i) * 8;
+      const cy = 18;
+      if (i < this.heavyAmmo) {
+        ctx.fillStyle = PALETTE.heavyBase;
+        ctx.fillRect(cx, cy, 6, 6);
+        ctx.fillStyle = PALETTE.heavyCore;
+        ctx.fillRect(cx + 2, cy + 1, 2, 4);
+      } else {
+        ctx.fillStyle = PALETTE.heavyDark;
+        ctx.fillRect(cx, cy, 6, 1);
+        ctx.fillRect(cx, cy + 5, 6, 1);
+        ctx.fillRect(cx, cy, 1, 6);
+        ctx.fillRect(cx + 5, cy, 1, 6);
+      }
+    }
 
     // barra de tiempo del power-up
     if (this.doubleShot > 0) {
@@ -925,4 +987,24 @@ function drawFighter(
   // cabina
   ctx.fillStyle = light;
   ctx.fillRect(x + 5, y + 4, 2, 2);
+}
+
+function drawHeavyPowerUp(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  pulse: boolean,
+) {
+  // celda de energia: base roja suave con nucleo blanco
+  ctx.fillStyle = PALETTE.heavyDark;
+  ctx.fillRect(x + 1, y + 1, PU_W - 2, PU_H - 2);
+  ctx.fillStyle = pulse ? PALETTE.heavyCore : PALETTE.heavyBase;
+  ctx.fillRect(x + 2, y, PU_W - 4, 1);
+  ctx.fillRect(x + 2, y + PU_H - 1, PU_W - 4, 1);
+  ctx.fillRect(x, y + 2, 1, PU_H - 4);
+  ctx.fillRect(x + PU_W - 1, y + 2, 1, PU_H - 4);
+  ctx.fillStyle = PALETTE.heavyBase;
+  ctx.fillRect(x + 3, y + 2, 4, 6);
+  ctx.fillStyle = PALETTE.heavyCore;
+  ctx.fillRect(x + 4, y + 3, 2, 4);
 }
