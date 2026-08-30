@@ -1,3 +1,6 @@
+<img width="761" height="591" alt="image" src="https://github.com/user-attachments/assets/e174150f-34e6-4c72-a2e9-9774ef9f1b36" />
+
+
 # Galactic Invaders React
 
 "Crea un juego arcade retro 2D completamente funcional en React utilizando HTML5 <canvas>. El estilo visual debe ser estrictamente 8-bit pixel art, inspirado en los clásicos del espacio.
