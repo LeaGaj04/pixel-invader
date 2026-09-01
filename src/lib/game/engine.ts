@@ -808,6 +808,29 @@ export class Game {
       ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 3);
     }
 
+    // Fase 5: ente biológico
+    if (this.brain) {
+      drawBrain(
+        ctx,
+        Math.floor(this.brain.x),
+        Math.floor(this.brain.y),
+        this.brain.flash > 0,
+        this.t,
+      );
+      const bw = GAME_W - 80;
+      const bx = 40;
+      const by = GAME_H - 8;
+      ctx.fillStyle = PALETTE.powerBase;
+      ctx.fillRect(bx, by, bw, 4);
+      ctx.fillStyle = PALETTE.brainMagenta;
+      ctx.fillRect(bx, by, Math.round((bw * this.brain.hp) / BRAIN_HP), 4);
+      ctx.strokeStyle = PALETTE.brainToxic;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 3);
+    }
+
+
+
     // platillo veloz
     if (this.saucer) {
       drawSaucer(
