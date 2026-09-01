@@ -330,7 +330,9 @@ export class Game {
       b.y += b.vy * dt;
       if (b.vx) b.x += b.vx * dt;
     }
-    this.eBullets = this.eBullets.filter((b) => b.y < GAME_H + 10);
+    this.eBullets = this.eBullets.filter(
+      (b) => b.y < GAME_H + 10 && b.y > -20 && b.x > -20 && b.x < GAME_W + 20,
+    );
 
     // power-ups caen y son recogidos
     const pTop = GAME_H - 24;
