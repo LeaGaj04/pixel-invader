@@ -29,6 +29,10 @@ export const PALETTE = {
   heavyBase: "#ff7a7a",
   heavyDark: "#8f2323",
   heavyCore: "#ffffff",
+  brainMagenta: "#ff2fd6",
+  brainPurple: "#7a1fa8",
+  brainToxic: "#7dff2f",
+  brainFlesh: "#ff9ae8",
 };
 
 
@@ -93,6 +97,17 @@ interface Fighter {
   vy: number;
   hp: number;
   flash: number;
+  stat?: boolean;
+  fire?: number;
+}
+interface Brain {
+  x: number;
+  y: number;
+  t: number;
+  hp: number;
+  flash: number;
+  fireTimer: number;
+  pattern: number;
 }
 
 const PU_W = 10;
@@ -105,17 +120,25 @@ const SAUCER_SCORE = 500;
 
 export const PHASE2_SCORE = 700;
 export const PHASE3_SCORE = 1500;
+export const PHASE5_SCORE = 5000;
 const B_W = 72;
 const B_H = 32;
 const B_Y = 26;
 const BOSS_HP = 45;
 const BOSS_SCORE = 2000;
 
+const BR_W = 48;
+const BR_H = 40;
+const BR_Y = 28;
+const BRAIN_HP = 90;
+const BRAIN_SCORE = 5000;
+
 const F_W = 12;
 const F_H = 10;
 const FIGHTER_HP = 2;
 const FIGHTER_SCORE = 150;
 const F_TOP = 14;
+
 
 
 const ROWS = 3;
@@ -143,6 +166,8 @@ export class Game {
   private saucerTimer = 6 + Math.random() * 6;
   boss: Boss | null = null;
   private bossDefeated = false;
+  brain: Brain | null = null;
+  private brainDefeated = false;
   private fighters: Fighter[] = [];
   private squadTimer = 0;
   private waveSpeed = 0;
@@ -230,6 +255,8 @@ export class Game {
     this.heavyAmmo = 0;
     this.boss = null;
     this.bossDefeated = false;
+    this.brain = null;
+    this.brainDefeated = false;
     this.fighters = [];
     this.squadTimer = 0;
     this.waveSpeed = 0;
@@ -307,7 +334,9 @@ export class Game {
       b.y += b.vy * dt;
       if (b.vx) b.x += b.vx * dt;
     }
-    this.eBullets = this.eBullets.filter((b) => b.y < GAME_H + 10);
+    this.eBullets = this.eBullets.filter(
+      (b) => b.y < GAME_H + 10 && b.y > -20 && b.x > -20 && b.x < GAME_W + 20,
+    );
 
     // power-ups caen y son recogidos
     const pTop = GAME_H - 24;
@@ -430,9 +459,105 @@ export class Game {
       this.bullets = this.bullets.filter((b) => b.y > -10);
     }
 
+    // Fase 5: ente biológico + escolta estática
+    if (
+      this.bossDefeated &&
+      !this.brain &&
+      !this.brainDefeated &&
+      this.score >= PHASE5_SCORE
+    ) {
+      this.eBullets = [];
+      this.saucer = null;
+      this.fighters = [];
+      this.brain = {
+        x: GAME_W / 2 - BR_W / 2,
+        y: BR_Y,
+        t: 0,
+        hp: BRAIN_HP,
+        flash: 0,
+        fireTimer: 1.2,
+        pattern: 0,
+      };
+      const cy = BR_Y + 6;
+      for (let i = 0; i < 3; i++) {
+        this.fighters.push({
+          x: 10,
+          y: cy + i * 16,
+          vx: 0,
+          vy: 0,
+          hp: FIGHTER_HP,
+          flash: 0,
+          stat: true,
+          fire: 0.8 + i * 0.4,
+        });
+        this.fighters.push({
+          x: GAME_W - F_W - 10,
+          y: cy + i * 16,
+          vx: 0,
+          vy: 0,
+          hp: FIGHTER_HP,
+          flash: 0,
+          stat: true,
+          fire: 1.0 + i * 0.4,
+        });
+      }
+    }
+
+    if (this.brain) {
+      const br = this.brain;
+      br.t += dt;
+      br.x = GAME_W / 2 - BR_W / 2 + Math.sin(br.t * 0.6) * 46;
+      br.y = BR_Y + Math.sin(br.t * 1.3) * 5;
+      if (br.flash > 0) br.flash -= dt;
+
+      br.fireTimer -= dt;
+      if (br.fireTimer <= 0) {
+        br.fireTimer = 1 + Math.random();
+        const cx = br.x + BR_W / 2;
+        const cy = br.y + BR_H / 2;
+        const star = br.pattern % 2 === 1;
+        const n = star ? 8 : 12;
+        const spd = star ? 120 : 90;
+        const off = br.t * 0.7;
+        for (let i = 0; i < n; i++) {
+          const a = off + (i / n) * Math.PI * 2;
+          this.eBullets.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd,
+          });
+        }
+        br.pattern++;
+      }
+
+      for (const b of this.bullets) {
+        if (b.x >= br.x && b.x <= br.x + BR_W && b.y >= br.y && b.y <= br.y + BR_H) {
+          if (!b.heavy) b.y = -100;
+          br.hp -= b.heavy ? 3 : 1;
+          br.flash = 0.12;
+          if (br.hp <= 0) {
+            this.score += BRAIN_SCORE;
+            this.explode(br.x + BR_W / 2, br.y + BR_H / 2, 90);
+            this.brain = null;
+            this.brainDefeated = true;
+            this.eBullets = [];
+            this.fighters = [];
+            this.waveSpeed += 4;
+            this.squadTimer = 1.2;
+            this.wave++;
+          } else {
+            this.explode(b.x, b.y, 5);
+          }
+          break;
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
+    }
+
     // Fase 4: escuadrones de cazas verdes en zigzag
     if (this.bossDefeated && !this.boss) {
-      if (this.fighters.length === 0) {
+      if (this.fighters.length === 0 && !this.brain) {
         this.squadTimer -= dt;
         if (this.squadTimer <= 0) {
           this.wave++;
@@ -443,28 +568,37 @@ export class Game {
       const fBottom = GAME_H - 58;
       const playerTop = GAME_H - 24;
       for (const f of this.fighters) {
-        f.x += f.vx * dt;
-        f.y += f.vy * dt;
-        if (f.x < 4) {
-          f.x = 4;
-          f.vx = Math.abs(f.vx);
-        } else if (f.x > GAME_W - F_W - 4) {
-          f.x = GAME_W - F_W - 4;
-          f.vx = -Math.abs(f.vx);
-        }
-        if (f.y < F_TOP) {
-          f.y = F_TOP;
-          f.vy = Math.abs(f.vy);
-        } else if (f.y > fBottom) {
-          f.y = fBottom;
-          f.vy = -Math.abs(f.vy);
+        if (!f.stat) {
+          f.x += f.vx * dt;
+          f.y += f.vy * dt;
+          if (f.x < 4) {
+            f.x = 4;
+            f.vx = Math.abs(f.vx);
+          } else if (f.x > GAME_W - F_W - 4) {
+            f.x = GAME_W - F_W - 4;
+            f.vx = -Math.abs(f.vx);
+          }
+          if (f.y < F_TOP) {
+            f.y = F_TOP;
+            f.vy = Math.abs(f.vy);
+          } else if (f.y > fBottom) {
+            f.y = fBottom;
+            f.vy = -Math.abs(f.vy);
+          }
         }
         if (f.flash > 0) f.flash -= dt;
 
-        // disparo esporádico
-        if (Math.random() < 0.35 * dt) {
+        // disparo: torretas fijas con cadencia constante, cazas en zigzag esporádicos
+        if (f.stat) {
+          f.fire = (f.fire ?? 1) - dt;
+          if (f.fire <= 0) {
+            f.fire = 1.4 + Math.random() * 0.8;
+            this.eBullets.push({ x: f.x + F_W / 2, y: f.y + F_H, vy: 120 });
+          }
+        } else if (Math.random() < 0.35 * dt) {
           this.eBullets.push({ x: f.x + F_W / 2, y: f.y + F_H, vy: 130 + this.wave * 4 });
         }
+
 
         // choque contra la nave
         if (
@@ -677,6 +811,29 @@ export class Game {
       ctx.lineWidth = 1;
       ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 3);
     }
+
+    // Fase 5: ente biológico
+    if (this.brain) {
+      drawBrain(
+        ctx,
+        Math.floor(this.brain.x),
+        Math.floor(this.brain.y),
+        this.brain.flash > 0,
+        this.t,
+      );
+      const bw = GAME_W - 80;
+      const bx = 40;
+      const by = GAME_H - 8;
+      ctx.fillStyle = PALETTE.powerBase;
+      ctx.fillRect(bx, by, bw, 4);
+      ctx.fillStyle = PALETTE.brainMagenta;
+      ctx.fillRect(bx, by, Math.round((bw * this.brain.hp) / BRAIN_HP), 4);
+      ctx.strokeStyle = PALETTE.brainToxic;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 3);
+    }
+
+
 
     // platillo veloz
     if (this.saucer) {
@@ -1007,4 +1164,61 @@ function drawHeavyPowerUp(
   ctx.fillRect(x + 3, y + 2, 4, 6);
   ctx.fillStyle = PALETTE.heavyCore;
   ctx.fillRect(x + 4, y + 3, 2, 4);
+}
+
+function drawBrain(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  t: number,
+) {
+  const flesh = flash ? PALETTE.powerWhite : PALETTE.brainFlesh;
+  const mass = flash ? PALETTE.fire2 : PALETTE.brainMagenta;
+  const deep = flash ? PALETTE.fire1 : PALETTE.brainPurple;
+  const toxic = flash ? PALETTE.powerWhite : PALETTE.brainToxic;
+
+  // masa cerebral (lóbulos)
+  ctx.fillStyle = mass;
+  ctx.fillRect(x + 10, y, BR_W - 20, 4);
+  ctx.fillRect(x + 4, y + 4, BR_W - 8, 8);
+  ctx.fillRect(x, y + 12, BR_W, 10);
+  ctx.fillRect(x + 6, y + 22, BR_W - 12, 4);
+
+  // pliegues
+  ctx.fillStyle = deep;
+  for (let i = 0; i < 5; i++) {
+    const px = x + 6 + i * 8;
+    ctx.fillRect(px, y + 4, 2, 8);
+    ctx.fillRect(px + 2, y + 14, 2, 6);
+  }
+  ctx.fillRect(x + BR_W / 2 - 1, y, 2, 22);
+
+  // ojo central
+  ctx.fillStyle = flesh;
+  ctx.fillRect(x + BR_W / 2 - 8, y + 12, 16, 8);
+  ctx.fillStyle = toxic;
+  ctx.fillRect(x + BR_W / 2 - 5, y + 13, 10, 6);
+  ctx.fillStyle = "#0a0a14";
+  const look = Math.round(Math.sin(t * 1.7) * 2);
+  ctx.fillRect(x + BR_W / 2 - 2 + look, y + 14, 4, 4);
+  ctx.fillStyle = PALETTE.powerWhite;
+  ctx.fillRect(x + BR_W / 2 - 1 + look, y + 15, 1, 1);
+
+  // tentáculos ondulantes
+  ctx.fillStyle = deep;
+  for (let i = 0; i < 5; i++) {
+    const tx = x + 4 + i * 10;
+    const wob = Math.round(Math.sin(t * 4 + i) * 2);
+    ctx.fillRect(tx, y + 26, 3, 4);
+    ctx.fillRect(tx + wob, y + 30, 3, 4);
+    ctx.fillStyle = toxic;
+    ctx.fillRect(tx + wob, y + 34, 3, 2);
+    ctx.fillStyle = deep;
+  }
+
+  // nódulos tóxicos
+  ctx.fillStyle = toxic;
+  ctx.fillRect(x + 2, y + 14, 3, 3);
+  ctx.fillRect(x + BR_W - 5, y + 14, 3, 3);
 }
