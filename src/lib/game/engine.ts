@@ -1165,3 +1165,60 @@ function drawHeavyPowerUp(
   ctx.fillStyle = PALETTE.heavyCore;
   ctx.fillRect(x + 4, y + 3, 2, 4);
 }
+
+function drawBrain(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flash: boolean,
+  t: number,
+) {
+  const flesh = flash ? PALETTE.powerWhite : PALETTE.brainFlesh;
+  const mass = flash ? PALETTE.fire2 : PALETTE.brainMagenta;
+  const deep = flash ? PALETTE.fire1 : PALETTE.brainPurple;
+  const toxic = flash ? PALETTE.powerWhite : PALETTE.brainToxic;
+
+  // masa cerebral (lóbulos)
+  ctx.fillStyle = mass;
+  ctx.fillRect(x + 10, y, BR_W - 20, 4);
+  ctx.fillRect(x + 4, y + 4, BR_W - 8, 8);
+  ctx.fillRect(x, y + 12, BR_W, 10);
+  ctx.fillRect(x + 6, y + 22, BR_W - 12, 4);
+
+  // pliegues
+  ctx.fillStyle = deep;
+  for (let i = 0; i < 5; i++) {
+    const px = x + 6 + i * 8;
+    ctx.fillRect(px, y + 4, 2, 8);
+    ctx.fillRect(px + 2, y + 14, 2, 6);
+  }
+  ctx.fillRect(x + BR_W / 2 - 1, y, 2, 22);
+
+  // ojo central
+  ctx.fillStyle = flesh;
+  ctx.fillRect(x + BR_W / 2 - 8, y + 12, 16, 8);
+  ctx.fillStyle = toxic;
+  ctx.fillRect(x + BR_W / 2 - 5, y + 13, 10, 6);
+  ctx.fillStyle = "#0a0a14";
+  const look = Math.round(Math.sin(t * 1.7) * 2);
+  ctx.fillRect(x + BR_W / 2 - 2 + look, y + 14, 4, 4);
+  ctx.fillStyle = PALETTE.powerWhite;
+  ctx.fillRect(x + BR_W / 2 - 1 + look, y + 15, 1, 1);
+
+  // tentáculos ondulantes
+  ctx.fillStyle = deep;
+  for (let i = 0; i < 5; i++) {
+    const tx = x + 4 + i * 10;
+    const wob = Math.round(Math.sin(t * 4 + i) * 2);
+    ctx.fillRect(tx, y + 26, 3, 4);
+    ctx.fillRect(tx + wob, y + 30, 3, 4);
+    ctx.fillStyle = toxic;
+    ctx.fillRect(tx + wob, y + 34, 3, 2);
+    ctx.fillStyle = deep;
+  }
+
+  // nódulos tóxicos
+  ctx.fillStyle = toxic;
+  ctx.fillRect(x + 2, y + 14, 3, 3);
+  ctx.fillRect(x + BR_W - 5, y + 14, 3, 3);
+}
