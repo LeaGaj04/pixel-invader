@@ -251,6 +251,8 @@ export class Game {
     this.heavyAmmo = 0;
     this.boss = null;
     this.bossDefeated = false;
+    this.brain = null;
+    this.brainDefeated = false;
     this.fighters = [];
     this.squadTimer = 0;
     this.waveSpeed = 0;
