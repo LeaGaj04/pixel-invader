@@ -162,6 +162,8 @@ export class Game {
   private saucerTimer = 6 + Math.random() * 6;
   boss: Boss | null = null;
   private bossDefeated = false;
+  brain: Brain | null = null;
+  private brainDefeated = false;
   private fighters: Fighter[] = [];
   private squadTimer = 0;
   private waveSpeed = 0;
