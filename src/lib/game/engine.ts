@@ -457,7 +457,105 @@ export class Game {
 
     // Fase 4: escuadrones de cazas verdes en zigzag
     if (this.bossDefeated && !this.boss) {
-      if (this.fighters.length === 0) {
+    // Fase 5: ente biológico + escolta estática
+    if (
+      this.bossDefeated &&
+      !this.brain &&
+      !this.brainDefeated &&
+      this.score >= PHASE5_SCORE
+    ) {
+      this.eBullets = [];
+      this.saucer = null;
+      this.fighters = [];
+      this.brain = {
+        x: GAME_W / 2 - BR_W / 2,
+        y: BR_Y,
+        t: 0,
+        hp: BRAIN_HP,
+        flash: 0,
+        fireTimer: 1.2,
+        pattern: 0,
+      };
+      const cy = BR_Y + 6;
+      for (let i = 0; i < 3; i++) {
+        this.fighters.push({
+          x: 10,
+          y: cy + i * 16,
+          vx: 0,
+          vy: 0,
+          hp: FIGHTER_HP,
+          flash: 0,
+          stat: true,
+          fire: 0.8 + i * 0.4,
+        });
+        this.fighters.push({
+          x: GAME_W - F_W - 10,
+          y: cy + i * 16,
+          vx: 0,
+          vy: 0,
+          hp: FIGHTER_HP,
+          flash: 0,
+          stat: true,
+          fire: 1.0 + i * 0.4,
+        });
+      }
+    }
+
+    if (this.brain) {
+      const br = this.brain;
+      br.t += dt;
+      br.x = GAME_W / 2 - BR_W / 2 + Math.sin(br.t * 0.6) * 46;
+      br.y = BR_Y + Math.sin(br.t * 1.3) * 5;
+      if (br.flash > 0) br.flash -= dt;
+
+      br.fireTimer -= dt;
+      if (br.fireTimer <= 0) {
+        br.fireTimer = 1 + Math.random();
+        const cx = br.x + BR_W / 2;
+        const cy = br.y + BR_H / 2;
+        const star = br.pattern % 2 === 1;
+        const n = star ? 8 : 12;
+        const spd = star ? 120 : 90;
+        const off = br.t * 0.7;
+        for (let i = 0; i < n; i++) {
+          const a = off + (i / n) * Math.PI * 2;
+          this.eBullets.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd,
+          });
+        }
+        br.pattern++;
+      }
+
+      for (const b of this.bullets) {
+        if (b.x >= br.x && b.x <= br.x + BR_W && b.y >= br.y && b.y <= br.y + BR_H) {
+          if (!b.heavy) b.y = -100;
+          br.hp -= b.heavy ? 3 : 1;
+          br.flash = 0.12;
+          if (br.hp <= 0) {
+            this.score += BRAIN_SCORE;
+            this.explode(br.x + BR_W / 2, br.y + BR_H / 2, 90);
+            this.brain = null;
+            this.brainDefeated = true;
+            this.eBullets = [];
+            this.fighters = [];
+            this.waveSpeed += 4;
+            this.squadTimer = 1.2;
+            this.wave++;
+          } else {
+            this.explode(b.x, b.y, 5);
+          }
+          break;
+        }
+      }
+      this.bullets = this.bullets.filter((b) => b.y > -10);
+    }
+
+    // Fase 4: escuadrones de cazas verdes en zigzag
+    if (this.bossDefeated && !this.boss) {
+      if (this.fighters.length === 0 && !this.brain) {
         this.squadTimer -= dt;
         if (this.squadTimer <= 0) {
           this.wave++;
@@ -468,28 +566,37 @@ export class Game {
       const fBottom = GAME_H - 58;
       const playerTop = GAME_H - 24;
       for (const f of this.fighters) {
-        f.x += f.vx * dt;
-        f.y += f.vy * dt;
-        if (f.x < 4) {
-          f.x = 4;
-          f.vx = Math.abs(f.vx);
-        } else if (f.x > GAME_W - F_W - 4) {
-          f.x = GAME_W - F_W - 4;
-          f.vx = -Math.abs(f.vx);
-        }
-        if (f.y < F_TOP) {
-          f.y = F_TOP;
-          f.vy = Math.abs(f.vy);
-        } else if (f.y > fBottom) {
-          f.y = fBottom;
-          f.vy = -Math.abs(f.vy);
+        if (!f.stat) {
+          f.x += f.vx * dt;
+          f.y += f.vy * dt;
+          if (f.x < 4) {
+            f.x = 4;
+            f.vx = Math.abs(f.vx);
+          } else if (f.x > GAME_W - F_W - 4) {
+            f.x = GAME_W - F_W - 4;
+            f.vx = -Math.abs(f.vx);
+          }
+          if (f.y < F_TOP) {
+            f.y = F_TOP;
+            f.vy = Math.abs(f.vy);
+          } else if (f.y > fBottom) {
+            f.y = fBottom;
+            f.vy = -Math.abs(f.vy);
+          }
         }
         if (f.flash > 0) f.flash -= dt;
 
-        // disparo esporádico
-        if (Math.random() < 0.35 * dt) {
+        // disparo: torretas fijas con cadencia constante, cazas en zigzag esporádicos
+        if (f.stat) {
+          f.fire = (f.fire ?? 1) - dt;
+          if (f.fire <= 0) {
+            f.fire = 1.4 + Math.random() * 0.8;
+            this.eBullets.push({ x: f.x + F_W / 2, y: f.y + F_H, vy: 120 });
+          }
+        } else if (Math.random() < 0.35 * dt) {
           this.eBullets.push({ x: f.x + F_W / 2, y: f.y + F_H, vy: 130 + this.wave * 4 });
         }
+
 
         // choque contra la nave
         if (
