@@ -29,6 +29,10 @@ export const PALETTE = {
   heavyBase: "#ff7a7a",
   heavyDark: "#8f2323",
   heavyCore: "#ffffff",
+  brainMagenta: "#ff2fd6",
+  brainPurple: "#7a1fa8",
+  brainToxic: "#7dff2f",
+  brainFlesh: "#ff9ae8",
 };
 
 
