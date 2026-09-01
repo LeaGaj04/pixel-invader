@@ -93,6 +93,17 @@ interface Fighter {
   vy: number;
   hp: number;
   flash: number;
+  stat?: boolean;
+  fire?: number;
+}
+interface Brain {
+  x: number;
+  y: number;
+  t: number;
+  hp: number;
+  flash: number;
+  fireTimer: number;
+  pattern: number;
 }
 
 const PU_W = 10;
@@ -105,17 +116,25 @@ const SAUCER_SCORE = 500;
 
 export const PHASE2_SCORE = 700;
 export const PHASE3_SCORE = 1500;
+export const PHASE5_SCORE = 5000;
 const B_W = 72;
 const B_H = 32;
 const B_Y = 26;
 const BOSS_HP = 45;
 const BOSS_SCORE = 2000;
 
+const BR_W = 48;
+const BR_H = 40;
+const BR_Y = 28;
+const BRAIN_HP = 90;
+const BRAIN_SCORE = 5000;
+
 const F_W = 12;
 const F_H = 10;
 const FIGHTER_HP = 2;
 const FIGHTER_SCORE = 150;
 const F_TOP = 14;
+
 
 
 const ROWS = 3;
