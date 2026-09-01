@@ -455,8 +455,6 @@ export class Game {
       this.bullets = this.bullets.filter((b) => b.y > -10);
     }
 
-    // Fase 4: escuadrones de cazas verdes en zigzag
-    if (this.bossDefeated && !this.boss) {
     // Fase 5: ente biológico + escolta estática
     if (
       this.bossDefeated &&
